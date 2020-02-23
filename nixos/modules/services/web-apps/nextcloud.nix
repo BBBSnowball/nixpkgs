@@ -42,6 +42,19 @@ let
       occ $*
   '';
 
+  webroot = pkgs.stdenv.mkDerivation {
+    name = "nextcloud-webroot";
+    inherit (pkgs) nextcloud;
+    store_apps_path = "${cfg.home}/store-apps";
+    phases = "installPhase";
+    installPhase = ''
+      mkdir $out
+      for x in $(cd $nextcloud ; ls -1) ; do
+        ln -s $nextcloud/$x $out/$x
+      done
+      ln -s $store_apps_path $out/store-apps
+    '';
+  };
 in {
   options.services.nextcloud = {
     enable = mkEnableOption "nextcloud";
@@ -343,8 +356,8 @@ in {
             ''}
             $CONFIG = [
               'apps_paths' => [
-                [ 'path' => '${cfg.home}/apps', 'url' => '/apps', 'writable' => false ],
-                [ 'path' => '${cfg.home}/store-apps', 'url' => '/store-apps', 'writable' => true ],
+                [ 'path' => '${webroot}/apps',       'url' => '/apps',       'writable' => false ],
+                [ 'path' => '${webroot}/store-apps', 'url' => '/store-apps', 'writable' => true ],
               ],
               'datadirectory' => '${cfg.home}/data',
               'skeletondirectory' => '${cfg.skeletonDirectory}',
@@ -471,7 +484,7 @@ in {
         enable = true;
         virtualHosts = {
           ${cfg.hostName} = {
-            root = pkgs.nextcloud;
+            root = webroot;
             locations = {
               "= /robots.txt" = {
                 priority = 100;
